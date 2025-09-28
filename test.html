@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数独游戏测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+        }
+        .test-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .sudoku-test-board {
+            display: grid;
+            grid-template-columns: repeat(9, 30px);
+            gap: 1px;
+            background: #333;
+            border: 2px solid #333;
+            margin: 20px 0;
+        }
+        .sudoku-test-cell {
+            background: white;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            height: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>数独游戏功能测试</h1>
+        <div id="test-results"></div>
+        <div class="sudoku-test-board" id="test-board"></div>
+        <button onclick="runTests()">运行测试</button>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/sudoku-validator.js"></script>
+    <script src="js/sudoku-generator.js"></script>
+
+    <script>
+        function runTests() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h2>测试结果</h2>';
+
+            let passed = 0;
+            let total = 0;
+
+            // 测试1: 工具函数
+            total++;
+            try {
+                const formatted = SudokuUtils.formatTime(125);
+                if (formatted === '02:05') {
+                    results.innerHTML += '<div class="test-result test-pass">✓ 工具函数测试通过</div>';
+                    passed++;
+                } else {
+                    results.innerHTML += '<div class="test-result test-fail">✗ 工具函数测试失败</div>';
+                }
+            } catch (e) {
+                results.innerHTML += '<div class="test-result test-fail">✗ 工具函数测试异常: ' + e.message + '</div>';
+            }
+
+            // 测试2: 数独验证
+            total++;
+            try {
+                const testBoard = [
+                    [5,3,4,6,7,8,9,1,2],
+                    [6,7,2,1,9,5,3,4,8],
+                    [1,9,8,3,4,2,5,6,7],
+                    [8,5,9,7,6,1,4,2,3],
+                    [4,2,6,8,5,3,7,9,1],
+                    [7,1,3,9,2,4,8,5,6],
+                    [9,6,1,5,3,7,2,8,4],
+                    [2,8,7,4,1,9,6,3,5],
+                    [3,4,5,2,8,6,1,7,9]
+                ];
+
+                if (SudokuValidator.isComplete(testBoard)) {
+                    results.innerHTML += '<div class="test-result test-pass">✓ 数独验证测试通过</div>';
+                    passed++;
+                } else {
+                    results.innerHTML += '<div class="test-result test-fail">✗ 数独验证测试失败</div>';
+                }
+            } catch (e) {
+                results.innerHTML += '<div class="test-result test-fail">✗ 数独验证测试异常: ' + e.message + '</div>';
+            }
+
+            // 测试3: 数独生成
+            total++;
+            try {
+                const puzzle = SudokuGenerator.generatePuzzle('easy');
+                if (puzzle && puzzle.puzzle && puzzle.solution) {
+                    results.innerHTML += '<div class="test-result test-pass">✓ 数独生成测试通过</div>';
+                    displayTestBoard(puzzle.puzzle);
+                    passed++;
+                } else {
+                    results.innerHTML += '<div class="test-result test-fail">✗ 数独生成测试失败</div>';
+                }
+            } catch (e) {
+                results.innerHTML += '<div class="test-result test-fail">✗ 数独生成测试异常: ' + e.message + '</div>';
+            }
+
+            // 测试4: 本地存储
+            total++;
+            try {
+                const testData = {test: 'data'};
+                SudokuUtils.storage.save('test_key', testData);
+                const loadedData = SudokuUtils.storage.load('test_key');
+                if (loadedData && loadedData.test === 'data') {
+                    results.innerHTML += '<div class="test-result test-pass">✓ 本地存储测试通过</div>';
+                    passed++;
+                } else {
+                    results.innerHTML += '<div class="test-result test-fail">✗ 本地存储测试失败</div>';
+                }
+            } catch (e) {
+                results.innerHTML += '<div class="test-result test-fail">✗ 本地存储测试异常: ' + e.message + '</div>';
+            }
+
+            // 总结
+            results.innerHTML += `<h3>测试总结: ${passed}/${total} 通过</h3>`;
+            if (passed === total) {
+                results.innerHTML += '<div class="test-result test-pass">🎉 所有测试通过！游戏功能正常。</div>';
+            } else {
+                results.innerHTML += '<div class="test-result test-fail">⚠️ 部分测试失败，请检查代码。</div>';
+            }
+        }
+
+        function displayTestBoard(board) {
+            const testBoard = document.getElementById('test-board');
+            testBoard.innerHTML = '';
+
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'sudoku-test-cell';
+                    cell.textContent = board[i][j] || '';
+                    testBoard.appendChild(cell);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

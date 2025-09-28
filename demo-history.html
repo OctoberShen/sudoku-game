@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史记录演示 - 数独游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .demo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .demo-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .demo-content {
+            text-align: center;
+        }
+        .btn {
+            padding: 12px 24px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>🎮 数独游戏历史记录演示</h1>
+            <p>这个页面用于生成演示用的历史记录数据</p>
+        </div>
+
+        <div class="demo-content">
+            <button class="btn btn-primary" onclick="generateDemoRecords()">🎲 生成演示数据</button>
+            <button class="btn btn-secondary" onclick="clearRecords()">🗑️ 清除数据</button>
+            <button class="btn btn-secondary" onclick="viewRecords()">📊 查看数据</button>
+            <button class="btn btn-secondary" onclick="openGame()">🎮 打开游戏</button>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'info') {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+            statusElement.style.display = 'block';
+
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 3000);
+        }
+
+        function generateDemoRecords() {
+            try {
+                // 获取现有记录
+                let records = JSON.parse(localStorage.getItem('sudoku_records') || '[]');
+
+                // 生成演示数据
+                const demoRecords = [
+                    {
+                        gameId: 'demo_' + Date.now() + '_1',
+                        difficulty: 'easy',
+                        time: 285,
+                        moves: 42,
+                        hints: 2,
+                        completedAt: new Date(Date.now() - 86400000).toISOString() // 1天前
+                    },
+                    {
+                        gameId: 'demo_' + Date.now() + '_2',
+                        difficulty: 'medium',
+                        time: 456,
+                        moves: 67,
+                        hints: 5,
+                        completedAt: new Date(Date.now() - 172800000).toISOString() // 2天前
+                    },
+                    {
+                        gameId: 'demo_' + Date.now() + '_3',
+                        difficulty: 'hard',
+                        time: 789,
+                        moves: 89,
+                        hints: 8,
+                        completedAt: new Date(Date.now() - 259200000).toISOString() // 3天前
+                    },
+                    {
+                        gameId: 'demo_' + Date.now() + '_4',
+                        difficulty: 'easy',
+                        time: 198,
+                        moves: 31,
+                        hints: 0,
+                        completedAt: new Date(Date.now() - 345600000).toISOString() // 4天前
+                    },
+                    {
+                        gameId: 'demo_' + Date.now() + '_5',
+                        difficulty: 'medium',
+                        time: 334,
+                        moves: 55,
+                        hints: 3,
+                        completedAt: new Date(Date.now() - 432000000).toISOString() // 5天前
+                    }
+                ];
+
+                // 添加到记录中
+                records.push(...demoRecords);
+
+                // 只保留最近20条记录
+                if (records.length > 20) {
+                    records = records.slice(-20);
+                }
+
+                // 保存到本地存储
+                localStorage.setItem('sudoku_records', JSON.stringify(records));
+
+                showStatus(`成功生成 ${demoRecords.length} 条演示记录！`, 'success');
+            } catch (error) {
+                showStatus('生成演示数据失败：' + error.message, 'error');
+            }
+        }
+
+        function clearRecords() {
+            if (confirm('确定要清除所有历史记录吗？')) {
+                localStorage.removeItem('sudoku_records');
+                showStatus('历史记录已清除', 'info');
+            }
+        }
+
+        function viewRecords() {
+            const records = JSON.parse(localStorage.getItem('sudoku_records') || '[]');
+
+            if (records.length === 0) {
+                showStatus('暂无历史记录', 'info');
+                return;
+            }
+
+            let summary = `总记录数：${records.length}\n\n`;
+
+            const stats = calculateStats(records);
+            summary += `平均用时：${stats.averageTime}\n`;
+            summary += `平均步数：${stats.averageMoves}\n`;
+            summary += `平均提示：${stats.averageHints}\n`;
+            summary += `最佳时间：${stats.bestTime}\n\n`;
+
+            summary += '最近5条记录：\n';
+            records.slice(-5).forEach((record, index) => {
+                const date = new Date(record.completedAt).toLocaleString('zh-CN');
+                summary += `${index + 1}. ${getDifficultyText(record.difficulty)} - ${formatTime(record.time)} - ${date}\n`;
+            });
+
+            alert(summary);
+        }
+
+        function calculateStats(records) {
+            if (records.length === 0) {
+                return {
+                    averageTime: '00:00',
+                    averageMoves: 0,
+                    averageHints: 0,
+                    bestTime: '00:00'
+                };
+            }
+
+            const totalTime = records.reduce((sum, record) => sum + record.time, 0);
+            const totalMoves = records.reduce((sum, record) => sum + record.moves, 0);
+            const totalHints = records.reduce((sum, record) => sum + record.hints, 0);
+            const bestTime = Math.min(...records.map(record => record.time));
+
+            return {
+                averageTime: formatTime(Math.round(totalTime / records.length)),
+                averageMoves: Math.round(totalMoves / records.length),
+                averageHints: Math.round(totalHints / records.length),
+                bestTime: formatTime(bestTime)
+            };
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function getDifficultyText(difficulty) {
+            const texts = {
+                easy: '简单',
+                medium: '中等',
+                hard: '困难'
+            };
+            return texts[difficulty] || '未知';
+        }
+
+        function openGame() {
+            window.open('index.html', '_blank');
+        }
+    </script>
+</body>
+</html>
