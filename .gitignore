@@ -1,0 +1,64 @@
+# CLAUDE.md 文件（包括所有子目录中的）
+CLAUDE.md
+**/CLAUDE.md
+
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 编辑器和IDE配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 临时文件
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Node.js 相关（如果将来需要）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# 构建输出
+dist/
+build/
+out/
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 测试覆盖率报告
+coverage/
+*.lcov
+
+# 其他常见忽略文件
+*.pid
+*.seed
+*.pid.lock

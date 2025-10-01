@@ -24,6 +24,12 @@ class SudokuGame {
         this.isGameStarted = false;
         this.gameId = null;
 
+        // 笔记功能
+        this.notes = {};                // 存储所有单元格的笔记 { "row,col": [1,2,3] }
+        this.notesMode = false;         // 是否处于笔记模式
+        this.notesHistory = [];         // 笔记操作历史
+        this.notesRedoStack = [];       // 笔记重做栈
+
         // 初始化游戏
         this.init();
     }
@@ -62,6 +68,14 @@ class SudokuGame {
                 cell.dataset.col = j;
                 cell.dataset.index = i * 9 + j;
                 cell.addEventListener('click', () => this.selectCell(i, j));
+                cell.addEventListener('contextmenu', (e) => this.handleCellRightClick(i, j, e));
+
+                // 创建笔记容器
+                const notesContainer = document.createElement('div');
+                notesContainer.className = 'notes-container';
+                notesContainer.innerHTML = this.createNotesGrid();
+                cell.appendChild(notesContainer);
+
                 boardElement.appendChild(cell);
             }
         }
@@ -86,7 +100,13 @@ class SudokuGame {
         document.querySelectorAll('.number-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const number = parseInt(btn.dataset.number);
-                this.inputNumber(number);
+                if (this.notesMode && this.selectedCell) {
+                    // 笔记模式下，使用笔记功能
+                    this.toggleNoteNumber(number);
+                } else {
+                    // 正常模式下，输入数字
+                    this.inputNumber(number);
+                }
             });
         });
 
@@ -101,6 +121,28 @@ class SudokuGame {
 
         document.getElementById('export-history').addEventListener('click', () => {
             this.exportHistory();
+        });
+
+        // 笔记功能事件
+        document.getElementById('notes-mode-toggle').addEventListener('change', (e) => {
+            this.toggleNotesMode(e.target.checked);
+        });
+
+        document.getElementById('clear-notes-btn').addEventListener('click', () => {
+            this.clearAllNotes();
+        });
+
+        document.getElementById('auto-notes-btn').addEventListener('click', () => {
+            this.autoFillNotes();
+        });
+
+        // 笔记数字选择器事件
+        document.querySelectorAll('.notes-number-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const number = parseInt(btn.dataset.number);
+                this.toggleNoteNumber(number);
+            });
         });
 
         // 键盘事件
@@ -134,6 +176,12 @@ class SudokuGame {
         this.isGameComplete = false;
         this.isGameStarted = false;
 
+        // 重置笔记相关状态
+        this.notes = {};                // 清空所有笔记
+        this.notesMode = false;         // 关闭笔记模式
+        this.notesHistory = [];         // 清空笔记历史
+        this.notesRedoStack = [];       // 清空笔记重做栈
+
         // 生成新的数独谜题
         this.generatePuzzle();
 
@@ -141,6 +189,8 @@ class SudokuGame {
         this.updateBoard();
         this.updateStats();
         this.updateButtons();
+        this.updateAllCellsNotes();     // 清除所有笔记显示
+        this.updateNotesControls();     // 更新笔记控制按钮状态
 
         // 生成新的游戏ID
         this.gameId = SudokuUtils.generateGameId();
@@ -155,23 +205,17 @@ class SudokuGame {
     // 生成数独谜题
     generatePuzzle() {
         try {
-            // 尝试从预设题目加载
-            const presetPuzzle = this.loadPresetPuzzle();
-            if (presetPuzzle) {
-                this.board = SudokuUtils.deepCopy(presetPuzzle.puzzle);
-                this.solution = SudokuUtils.deepCopy(presetPuzzle.solution);
-                this.initialBoard = SudokuUtils.deepCopy(presetPuzzle.puzzle);
-                return;
-            }
-
-            // 如果没有预设题目，动态生成
+            // 完全使用动态生成，不再依赖预设题目
             const puzzle = SudokuGenerator.generatePuzzle(this.difficulty);
             this.board = SudokuUtils.deepCopy(puzzle.puzzle);
             this.solution = SudokuUtils.deepCopy(puzzle.solution);
             this.initialBoard = SudokuUtils.deepCopy(puzzle.puzzle);
+            
+            // 记录生成的谜题信息
+            console.log(`成功生成${this.difficulty}难度数独，移除了${puzzle.cellsRemoved}个格子`);
         } catch (error) {
-            console.error('生成数独失败:', error);
-            // 如果生成失败，使用一个简单的预设
+            console.error('动态生成数独失败:', error);
+            // 如果动态生成失败，使用备用的简单谜题
             this.board = [
                 [5,3,0,0,7,0,0,0,0],
                 [6,0,0,1,9,5,0,0,0],
@@ -195,104 +239,11 @@ class SudokuGame {
                 [3,4,5,2,8,6,1,7,9]
             ];
             this.initialBoard = SudokuUtils.deepCopy(this.board);
+            console.warn('使用备用谜题');
         }
     }
 
-    // 加载预设题目
-    loadPresetPuzzle() {
-        try {
-            // 由于浏览器安全限制，使用预设的题目数组
-            const presetPuzzles = {
-                easy: [
-                    {
-                        puzzle: [
-                            [5,3,0,0,7,0,0,0,0],
-                            [6,0,0,1,9,5,0,0,0],
-                            [0,9,8,0,0,0,0,6,0],
-                            [8,0,0,0,6,0,0,0,3],
-                            [4,0,0,8,0,3,0,0,1],
-                            [7,0,0,0,2,0,0,0,6],
-                            [0,6,0,0,0,0,2,8,0],
-                            [0,0,0,4,1,9,0,0,5],
-                            [0,0,0,0,8,0,0,7,9]
-                        ],
-                        solution: [
-                            [5,3,4,6,7,8,9,1,2],
-                            [6,7,2,1,9,5,3,4,8],
-                            [1,9,8,3,4,2,5,6,7],
-                            [8,5,9,7,6,1,4,2,3],
-                            [4,2,6,8,5,3,7,9,1],
-                            [7,1,3,9,2,4,8,5,6],
-                            [9,6,1,5,3,7,2,8,4],
-                            [2,8,7,4,1,9,6,3,5],
-                            [3,4,5,2,8,6,1,7,9]
-                        ]
-                    }
-                ],
-                medium: [
-                    {
-                        puzzle: [
-                            [0,0,0,6,0,0,4,0,0],
-                            [7,0,0,0,0,3,6,0,0],
-                            [0,0,0,0,9,1,0,8,0],
-                            [5,0,0,0,0,0,0,0,0],
-                            [0,0,8,0,0,0,1,0,0],
-                            [0,0,1,0,0,0,0,0,3],
-                            [0,2,0,5,1,0,0,0,0],
-                            [0,0,3,7,0,0,0,0,4],
-                            [0,0,6,0,0,8,0,0,0]
-                        ],
-                        solution: [
-                            [1,3,2,6,7,5,4,9,8],
-                            [7,8,9,4,2,3,6,5,1],
-                            [4,6,5,8,9,1,3,7,2],
-                            [5,9,4,2,3,7,8,1,6],
-                            [3,7,8,5,6,4,1,2,9],
-                            [2,1,6,9,8,4,5,4,3],
-                            [9,2,7,5,1,6,4,3,7],
-                            [8,5,3,7,4,9,2,6,4],
-                            [6,4,1,3,5,8,7,8,5]
-                        ]
-                    }
-                ],
-                hard: [
-                    {
-                        puzzle: [
-                            [8,0,0,0,0,0,0,0,0],
-                            [0,0,3,6,0,0,0,0,0],
-                            [0,7,0,0,9,0,2,0,0],
-                            [0,5,0,0,0,7,0,0,0],
-                            [0,0,0,0,4,5,7,0,0],
-                            [0,0,0,1,0,0,0,3,0],
-                            [0,0,1,0,0,0,0,6,8],
-                            [0,0,8,5,0,0,0,1,0],
-                            [0,9,0,0,0,0,4,0,0]
-                        ],
-                        solution: [
-                            [8,1,2,7,5,3,6,4,9],
-                            [9,4,3,6,8,2,1,7,5],
-                            [6,7,5,4,9,1,2,8,3],
-                            [1,5,4,2,3,7,8,9,6],
-                            [3,6,9,8,4,5,7,2,1],
-                            [2,8,7,1,6,9,5,3,4],
-                            [5,2,1,9,7,4,3,6,8],
-                            [4,3,8,5,2,6,9,1,7],
-                            [7,9,6,3,1,8,4,5,2]
-                        ]
-                    }
-                ]
-            };
 
-            const difficultyPuzzles = presetPuzzles[this.difficulty];
-            if (difficultyPuzzles && difficultyPuzzles.length > 0) {
-                const randomPuzzle = difficultyPuzzles[Math.floor(Math.random() * difficultyPuzzles.length)];
-                return randomPuzzle;
-            }
-        } catch (error) {
-            console.error('加载预设题目失败:', error);
-        }
-        return null;
-    }
 
     // 选择格子
     selectCell(row, col) {
@@ -312,6 +263,7 @@ class SudokuGame {
         this.selectedCell = { row, col };
         this.updateBoard();
         this.highlightRelatedCells(row, col);
+        this.updateNotesControls();
     }
 
     // 高亮相关格子
@@ -370,6 +322,16 @@ class SudokuGame {
         this.updateBoard();
         this.updateStats();
         this.updateButtons();
+
+        // 清除该单元格的笔记（当输入有效数字时）
+        if (number !== 0) {
+            const key = `${row},${col}`;
+            if (this.notes[key]) {
+                this.saveNotesState();
+                delete this.notes[key];
+                this.updateNotesControls();
+            }
+        }
 
         // 保存游戏状态
         this.saveGameState();
@@ -610,8 +572,19 @@ class SudokuGame {
             const col = parseInt(cell.dataset.col);
             const value = this.board[row][col];
 
-            // 更新格子内容
-            cell.textContent = value === 0 ? '' : value;
+            // 保存笔记容器引用
+            const notesContainer = cell.querySelector('.notes-container');
+
+            // 更新格子内容（保留笔记容器）
+            cell.innerHTML = '';
+            if (value !== 0) {
+                cell.textContent = value;
+            }
+
+            // 重新添加笔记容器
+            if (notesContainer) {
+                cell.appendChild(notesContainer);
+            }
 
             // 更新格子样式
             cell.className = 'sudoku-cell';
@@ -630,7 +603,15 @@ class SudokuGame {
             if (this.selectedCell && value !== 0 && value === this.board[this.selectedCell.row][this.selectedCell.col]) {
                 cell.classList.add('same-value');
             }
+
+            // 添加空单元格标记（用于CSS选择器）
+            if (value === 0) {
+                cell.classList.add('empty');
+            }
         });
+
+        // 更新所有单元格的笔记显示
+        this.updateAllCellsNotes();
     }
 
     // 更新统计信息
@@ -662,9 +643,28 @@ class SudokuGame {
         // 数字键输入
         if (event.key >= '1' && event.key <= '9') {
             const number = parseInt(event.key);
-            this.inputNumber(number);
+            if (this.notesMode && this.selectedCell) {
+                // 笔记模式下，使用笔记功能
+                this.toggleNoteNumber(number);
+            } else {
+                // 正常模式下，输入数字
+                this.inputNumber(number);
+            }
         } else if (event.key === '0' || event.key === 'Delete' || event.key === 'Backspace') {
-            this.inputNumber(0);
+            if (this.notesMode && this.selectedCell) {
+                // 笔记模式下，清除笔记
+                const key = `${this.selectedCell.row},${this.selectedCell.col}`;
+                if (this.notes[key] && this.notes[key].length > 0) {
+                    this.saveNotesState();
+                    delete this.notes[key];
+                    this.updateCellNotes(this.selectedCell.row, this.selectedCell.col);
+                    this.updateNotesControls();
+                    this.saveGameState();
+                }
+            } else {
+                // 正常模式下，清除数字
+                this.inputNumber(0);
+            }
         }
 
         // 方向键导航
@@ -734,6 +734,11 @@ class SudokuGame {
             isGameComplete: this.isGameComplete,
             isGameStarted: this.isGameStarted,
             gameId: this.gameId,
+            // 笔记功能数据
+            notes: this.notes,
+            notesMode: this.notesMode,
+            notesHistory: this.notesHistory,
+            notesRedoStack: this.notesRedoStack,
             savedAt: SudokuUtils.getTimestamp()
         };
 
@@ -754,6 +759,12 @@ class SudokuGame {
         this.isGameComplete = gameState.isGameComplete || false;
         this.isGameStarted = gameState.isGameStarted || false;
         this.gameId = gameState.gameId || this.gameId;
+
+        // 加载笔记功能数据
+        this.notes = gameState.notes || {};
+        this.notesMode = gameState.notesMode || false;
+        this.notesHistory = gameState.notesHistory || [];
+        this.notesRedoStack = gameState.notesRedoStack || [];
 
         // 如果游戏正在进行的，重新开始计时
         if (this.isGameStarted && !this.isGameComplete) {
@@ -1017,6 +1028,240 @@ class SudokuGame {
 
         SudokuUtils.showMessage('历史记录已导出', 'success');
     }
+
+    // ========== 笔记功能方法 ==========
+
+    // 创建笔记网格
+    createNotesGrid() {
+        let grid = '<div class="notes-grid">';
+        for (let i = 1; i <= 9; i++) {
+            grid += `<div class="note-number" data-number="${i}">${i}</div>`;
+        }
+        grid += '</div>';
+        return grid;
+    }
+
+    // 切换笔记模式
+    toggleNotesMode(enabled) {
+        this.notesMode = enabled;
+        const gameContainer = document.querySelector('.game-container');
+        const indicator = document.getElementById('notes-mode-indicator');
+
+        if (enabled) {
+            gameContainer.classList.add('notes-mode');
+            indicator.classList.add('show');
+            this.updateNotesControls();
+        } else {
+            gameContainer.classList.remove('notes-mode');
+            indicator.classList.remove('show');
+            this.hideNotesSelector();
+        }
+    }
+
+    // 更新笔记控制按钮状态
+    updateNotesControls() {
+        const clearBtn = document.getElementById('clear-notes-btn');
+        const autoBtn = document.getElementById('auto-notes-btn');
+        const hasNotes = Object.keys(this.notes).length > 0;
+        const hasSelectedCell = this.selectedCell && this.board[this.selectedCell.row][this.selectedCell.col] === 0;
+
+        clearBtn.disabled = !hasNotes;
+        autoBtn.disabled = !hasSelectedCell;
+    }
+
+    // 切换单元格的笔记数字
+    toggleNoteNumber(number) {
+        if (!this.selectedCell || this.notesMode === false) return;
+
+        const { row, col } = this.selectedCell;
+        const key = `${row},${col}`;
+
+        // 保存当前状态到历史
+        this.saveNotesState();
+
+        if (!this.notes[key]) {
+            this.notes[key] = [];
+        }
+
+        const index = this.notes[key].indexOf(number);
+        if (index > -1) {
+            // 移除数字
+            this.notes[key].splice(index, 1);
+            if (this.notes[key].length === 0) {
+                delete this.notes[key];
+            }
+        } else {
+            // 添加数字
+            this.notes[key].push(number);
+            this.notes[key].sort((a, b) => a - b);
+        }
+
+        this.updateCellNotes(row, col);
+        this.updateNotesControls();
+        this.saveGameState();
+    }
+
+    // 更新单元格笔记显示
+    updateCellNotes(row, col) {
+        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        if (!cell) return;
+
+        const notesContainer = cell.querySelector('.notes-container');
+        if (!notesContainer) return;
+
+        const noteNumbers = notesContainer.querySelectorAll('.note-number');
+        const key = `${row},${col}`;
+        const notes = this.notes[key] || [];
+
+        // 更新单元格样式
+        if (notes.length > 0) {
+            cell.classList.add('has-notes');
+        } else {
+            cell.classList.remove('has-notes');
+        }
+
+        // 更新笔记数字显示
+        noteNumbers.forEach(noteEl => {
+            const number = parseInt(noteEl.dataset.number);
+            if (notes.includes(number)) {
+                noteEl.classList.add('active');
+            } else {
+                noteEl.classList.remove('active');
+            }
+        });
+    }
+
+    // 清除所有笔记
+    clearAllNotes() {
+        if (Object.keys(this.notes).length === 0) return;
+
+        if (SudokuUtils.confirm('确定要清除所有笔记吗？')) {
+            this.saveNotesState();
+            this.notes = {};
+            this.updateAllCellsNotes();
+            this.updateNotesControls();
+            this.saveGameState();
+            SudokuUtils.showMessage('所有笔记已清除', 'info');
+        }
+    }
+
+    // 自动填充笔记（显示当前单元格的所有可能数字）
+    autoFillNotes() {
+        if (!this.selectedCell || this.board[this.selectedCell.row][this.selectedCell.col] !== 0) return;
+
+        const { row, col } = this.selectedCell;
+        const validNumbers = SudokuValidator.getValidNumbers(this.board, row, col);
+
+        if (validNumbers.length === 0) {
+            SudokuUtils.showMessage('该单元格没有可能的数字', 'warning');
+            return;
+        }
+
+        this.saveNotesState();
+        const key = `${row},${col}`;
+        this.notes[key] = [...validNumbers];
+
+        this.updateCellNotes(row, col);
+        this.updateNotesControls();
+        this.saveGameState();
+        SudokuUtils.showMessage(`已自动填充 ${validNumbers.length} 个候选数字`, 'success');
+    }
+
+    // 更新所有单元格的笔记显示
+    updateAllCellsNotes() {
+        for (let i = 0; i < 9; i++) {
+            for (let j = 0; j < 9; j++) {
+                // 添加安全检查，确保单元格存在
+                const cell = document.querySelector(`[data-row="${i}"][data-col="${j}"]`);
+                if (cell) {
+                    this.updateCellNotes(i, j);
+                }
+            }
+        }
+    }
+
+    // 保存笔记状态（用于撤销/重做）
+    saveNotesState() {
+        const state = JSON.parse(JSON.stringify(this.notes));
+        this.notesHistory.push(state);
+        this.notesRedoStack = []; // 清空重做栈
+
+        // 限制历史记录长度
+        if (this.notesHistory.length > 50) {
+            this.notesHistory.shift();
+        }
+    }
+
+    // 撤销笔记操作
+    undoNotes() {
+        if (this.notesHistory.length === 0) return;
+
+        const currentState = JSON.parse(JSON.stringify(this.notes));
+        this.notesRedoStack.push(currentState);
+
+        const previousState = this.notesHistory.pop();
+        this.notes = previousState;
+
+        this.updateAllCellsNotes();
+        this.updateNotesControls();
+        this.saveGameState();
+    }
+
+    // 重做笔记操作
+    redoNotes() {
+        if (this.notesRedoStack.length === 0) return;
+
+        const currentState = JSON.parse(JSON.stringify(this.notes));
+        this.notesHistory.push(currentState);
+
+        const nextState = this.notesRedoStack.pop();
+        this.notes = nextState;
+
+        this.updateAllCellsNotes();
+        this.updateNotesControls();
+        this.saveGameState();
+    }
+
+    // 显示笔记数字选择器
+    showNotesSelector(cell) {
+        const selector = document.getElementById('notes-number-selector');
+        const rect = cell.getBoundingClientRect();
+
+        selector.style.left = rect.left + rect.width / 2 + 'px';
+        selector.style.top = rect.bottom + 5 + 'px';
+        selector.classList.add('show');
+
+        // 更新按钮状态
+        const key = `${cell.dataset.row},${cell.dataset.col}`;
+        const notes = this.notes[key] || [];
+        selector.querySelectorAll('.notes-number-btn').forEach(btn => {
+            const number = parseInt(btn.dataset.number);
+            if (notes.includes(number)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    // 隐藏笔记数字选择器
+    hideNotesSelector() {
+        const selector = document.getElementById('notes-number-selector');
+        selector.classList.remove('show');
+    }
+
+    // 处理单元格右键点击（显示笔记选择器）
+    handleCellRightClick(row, col, e) {
+        e.preventDefault();
+
+        if (this.board[row][col] !== 0) return; // 非空单元格不显示笔记
+
+        const cell = e.target.closest('.sudoku-cell');
+        this.selectCell(row, col);
+        this.showNotesSelector(cell);
+    }
+
+    // ========== 笔记功能方法结束 ==========
 
     // 清除游戏数据
     clearGameData() {

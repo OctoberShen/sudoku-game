@@ -40,6 +40,18 @@
                     <button id="reset-btn" class="btn btn-secondary">🔄 重置</button>
                 </div>
 
+                <!-- 笔记控制区域 -->
+                <div class="notes-controls" id="notes-controls">
+                    <div class="notes-toggle">
+                        <input type="checkbox" id="notes-mode-toggle">
+                        <label for="notes-mode-toggle">📝 笔记模式</label>
+                    </div>
+                    <div class="notes-actions">
+                        <button class="notes-btn" id="clear-notes-btn" disabled>🗑️ 清除笔记</button>
+                        <button class="notes-btn" id="auto-notes-btn" disabled>🤖 自动填充</button>
+                    </div>
+                </div>
+
                 <div class="number-input">
                     <div class="number-pad">
                         <button class="number-btn" data-number="1">1</button>
@@ -92,6 +104,24 @@
         </main>
 
         <div class="game-message" id="game-message"></div>
+    </div>
+
+    <!-- 笔记模式指示器 -->
+    <div class="notes-mode-indicator" id="notes-mode-indicator">
+        📝 笔记模式已启用
+    </div>
+
+    <!-- 笔记数字选择器 -->
+    <div class="notes-number-selector" id="notes-number-selector">
+        <button class="notes-number-btn" data-number="1">1</button>
+        <button class="notes-number-btn" data-number="2">2</button>
+        <button class="notes-number-btn" data-number="3">3</button>
+        <button class="notes-number-btn" data-number="4">4</button>
+        <button class="notes-number-btn" data-number="5">5</button>
+        <button class="notes-number-btn" data-number="6">6</button>
+        <button class="notes-number-btn" data-number="7">7</button>
+        <button class="notes-number-btn" data-number="8">8</button>
+        <button class="notes-number-btn" data-number="9">9</button>
     </div>
 
     <script src="js/utils.js"></script>

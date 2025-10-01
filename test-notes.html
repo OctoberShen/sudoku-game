@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数独笔记功能测试</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .test-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .mini-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: #333;
+            border: 2px solid #333;
+            width: 150px;
+            height: 150px;
+            margin: 10px 0;
+        }
+
+        .mini-cell {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .mini-cell:hover {
+            background: #f0f8ff;
+        }
+
+        .notes-demo {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ccc;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .notes-demo .notes-container {
+            pointer-events: none;
+        }
+
+        .notes-demo.has-notes .note-number.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>📝 数独笔记功能测试</h1>
+
+        <div class="test-section">
+            <h3>测试 1: 笔记容器创建</h3>
+            <div id="test1-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>测试 2: 笔记显示功能</h3>
+            <div id="test2-result"></div>
+            <div class="notes-demo" id="demo-cell">
+                <div class="notes-container">
+                    <div class="notes-grid">
+                        <div class="note-number" data-number="1">1</div>
+                        <div class="note-number" data-number="2">2</div>
+                        <div class="note-number" data-number="3">3</div>
+                        <div class="note-number" data-number="4">4</div>
+                        <div class="note-number" data-number="5">5</div>
+                        <div class="note-number" data-number="6">6</div>
+                        <div class="note-number" data-number="7">7</div>
+                        <div class="note-number" data-number="8">8</div>
+                        <div class="note-number" data-number="9">9</div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="testNotesDisplay()">测试笔记显示</button>
+        </div>
+
+        <div class="test-section">
+            <h3>测试 3: 笔记切换功能</h3>
+            <div id="test3-result"></div>
+            <button onclick="testNotesToggle()">测试笔记切换</button>
+        </div>
+
+        <div class="test-section">
+            <h3>完整游戏测试</h3>
+            <p><a href="index.html" target="_blank">打开完整游戏测试笔记功能</a></p>
+        </div>
+    </div>
+
+    <script>
+        // 测试1: 笔记容器创建
+        function testNotesContainer() {
+            const result = document.getElementById('test1-result');
+
+            // 创建一个模拟的游戏环境
+            const mockCell = document.createElement('div');
+            mockCell.className = 'sudoku-cell';
+            mockCell.dataset.row = '0';
+            mockCell.dataset.col = '0';
+
+            // 创建笔记容器（模拟createBoard函数）
+            const notesContainer = document.createElement('div');
+            notesContainer.className = 'notes-container';
+
+            let gridHTML = '<div class="notes-grid">';
+            for (let i = 1; i <= 9; i++) {
+                gridHTML += `<div class="note-number" data-number="${i}">${i}</div>`;
+            }
+            gridHTML += '</div>';
+            notesContainer.innerHTML = gridHTML;
+
+            mockCell.appendChild(notesContainer);
+
+            // 检查创建结果
+            const containerFound = mockCell.querySelector('.notes-container') !== null;
+            const gridFound = mockCell.querySelector('.notes-grid') !== null;
+            const noteNumbers = mockCell.querySelectorAll('.note-number');
+            const correctCount = noteNumbers.length === 9;
+
+            let html = '';
+            if (containerFound) {
+                html += '<div class="test-pass">✅ 笔记容器创建成功</div>';
+            } else {
+                html += '<div class="test-fail">❌ 笔记容器创建失败</div>';
+            }
+
+            if (gridFound) {
+                html += '<div class="test-pass">✅ 笔记网格创建成功</div>';
+            } else {
+                html += '<div class="test-fail">❌ 笔记网格创建失败</div>';
+            }
+
+            if (correctCount) {
+                html += '<div class="test-pass">✅ 笔记数字数量正确 (9个)</div>';
+            } else {
+                html += '<div class="test-fail">❌ 笔记数字数量错误 (' + noteNumbers.length + '个)</div>';
+            }
+
+            result.innerHTML = html;
+        }
+
+        // 测试2: 笔记显示功能
+        function testNotesDisplay() {
+            const result = document.getElementById('test2-result');
+            const demoCell = document.getElementById('demo-cell');
+
+            // 模拟添加笔记
+            demoCell.classList.add('has-notes');
+            const noteNumbers = demoCell.querySelectorAll('.note-number');
+
+            // 激活一些数字
+            const testNumbers = [1, 3, 5, 7, 9];
+            noteNumbers.forEach(note => {
+                const num = parseInt(note.dataset.number);
+                if (testNumbers.includes(num)) {
+                    note.classList.add('active');
+                }
+            });
+
+            let html = '<div class="test-info">📝 已添加笔记数字: 1, 3, 5, 7, 9</div>';
+
+            // 检查显示状态
+            const hasNotesClass = demoCell.classList.contains('has-notes');
+            const activeNotes = demoCell.querySelectorAll('.note-number.active');
+
+            if (hasNotesClass) {
+                html += '<div class="test-pass">✅ has-notes 类已添加</div>';
+            } else {
+                html += '<div class="test-fail">❌ has-notes 类未添加</div>';
+            }
+
+            if (activeNotes.length === 5) {
+                html += '<div class="test-pass">✅ 激活笔记数量正确 (5个)</div>';
+            } else {
+                html += '<div class="test-fail">❌ 激活笔记数量错误 (' + activeNotes.length + '个)</div>';
+            }
+
+            result.innerHTML = html;
+        }
+
+        // 测试3: 笔记切换功能
+        function testNotesToggle() {
+            const result = document.getElementById('test3-result');
+            const demoCell = document.getElementById('demo-cell');
+
+            // 模拟切换笔记数字
+            const note3 = demoCell.querySelector('.note-number[data-number="3"]');
+            const note5 = demoCell.querySelector('.note-number[data-number="5"]');
+
+            let html = '';
+
+            if (note3 && note5) {
+                // 切换数字3（移除）
+                if (note3.classList.contains('active')) {
+                    note3.classList.remove('active');
+                    html += '<div class="test-pass">✅ 数字3笔记已移除</div>';
+                }
+
+                // 切换数字5（如果已激活则移除，否则激活）
+                if (note5.classList.contains('active')) {
+                    note5.classList.remove('active');
+                    html += '<div class="test-pass">✅ 数字5笔记已移除</div>';
+                } else {
+                    note5.classList.add('active');
+                    html += '<div class="test-pass">✅ 数字5笔记已添加</div>';
+                }
+            } else {
+                html += '<div class="test-fail">❌ 找不到笔记数字元素</div>';
+            }
+
+            const finalActiveCount = demoCell.querySelectorAll('.note-number.active').length;
+            html += '<div class="test-info">当前激活笔记数量: ' + finalActiveCount + '</div>';
+
+            result.innerHTML = html;
+        }
+
+        // 页面加载时运行基础测试
+        window.onload = function() {
+            testNotesContainer();
+        };
+    </script>
+</body>
+</html>

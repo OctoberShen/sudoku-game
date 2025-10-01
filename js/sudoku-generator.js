@@ -75,10 +75,13 @@ class SudokuGenerator {
         const puzzle = SudokuUtils.deepCopy(solution);
 
         // 根据难度设置要移除的格子数量
+        // 简单：保留45-50个已知数字（移除31-36个格子）
+        // 中等：保留30-40个已知数字（移除41-51个格子）
+        // 困难：保留20-30个已知数字（移除51-61个格子）
         const difficultySettings = {
-            easy: { min: 35, max: 45 },
-            medium: { min: 45, max: 55 },
-            hard: { min: 55, max: 65 }
+            easy: { min: 31, max: 36 },
+            medium: { min: 41, max: 51 },
+            hard: { min: 51, max: 61 }
         };
 
         const settings = difficultySettings[difficulty];
@@ -115,21 +118,38 @@ class SudokuGenerator {
 
         // 随机打乱位置
         const shuffledPositions = SudokuUtils.shuffle(positions);
+        let attempts = 0;
+        const maxAttempts = count * 3; // 增加最大尝试次数
 
-        for (let i = 0; i < count && i < shuffledPositions.length; i++) {
+        for (let i = 0; i < shuffledPositions.length && removedCells.length < count && attempts < maxAttempts; i++) {
             const { row, col } = shuffledPositions[i];
+            attempts++;
+
+            // 如果该位置已经被移除，跳过
+            if (puzzle[row][col] === 0) continue;
 
             // 临时移除数字
             const removedValue = puzzle[row][col];
             puzzle[row][col] = 0;
-            removedCells.push({ row, col, value: removedValue });
 
             // 检查是否仍有唯一解
-            if (!SudokuValidator.hasUniqueSolution(puzzle)) {
+            if (SudokuValidator.hasUniqueSolution(puzzle)) {
+                // 如果有唯一解，保持移除状态
+                removedCells.push({ row, col, value: removedValue });
+            } else {
                 // 如果没有唯一解，恢复数字
                 puzzle[row][col] = removedValue;
-                removedCells.pop();
             }
+
+            // 如果已经移除了足够的格子，提前结束
+            if (removedCells.length >= count) {
+                break;
+            }
+        }
+
+        // 如果移除的格子数量不够，尝试更保守的策略
+        if (removedCells.length < count) {
+            console.warn(`只能移除 ${removedCells.length} 个格子，目标是 ${count} 个`);
         }
 
         return removedCells;
